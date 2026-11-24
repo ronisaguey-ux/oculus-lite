@@ -1,0 +1,28 @@
+name: oculus_app
+description: oculus-lite read-only paper dashboard (equity, positions, fills, parameters).
+publish_to: none
+version: 0.1.0+1
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  windows:
+  web:
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+dependencies:
+  fl_chart: 1.2.0
+  flutter:
+    sdk: flutter
+  flutter_riverpod: 3.4.3
+  http: 1.6.0
+  provider: 6.1.5+1
+dev_dependencies:
+  flutter_lints: 3.0.0
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/design_tokens.json
