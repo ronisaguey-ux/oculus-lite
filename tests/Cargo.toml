@@ -1,0 +1,29 @@
+[package]
+name = "oculus-lite-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "oculus_lite_tests"
+path = "src/lib.rs"
+
+[dependencies]
+oculus-config-rs = { path = "../rust/oculus-config-rs" }
+oculus-execution = { path = "../rust/execution" }
+oculus-indicators = { path = "../rust/indicators" }
+oculus-backtester = { path = "../backtester" }
+oculus-trader = { path = "../trader" }
+
+[[test]]
+name = "determinism"
+path = "determinism.rs"
+
+[[test]]
+name = "paper_fills"
+path = "paper_fills.rs"
+
+[[test]]
+name = "risk_limits"
+path = "risk_limits.rs"
