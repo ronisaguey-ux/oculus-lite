@@ -318,3 +318,197 @@ fn parse_typed(kind: Kind, name: &str, raw: &str) -> Result<(), ConfigError> {
     let invalid = || ConfigError::InvalidValue {
         name: name.to_owned(),
         raw: raw.to_owned(),
+    };
+    let out_of_range = || ConfigError::OutOfRange {
+        name: name.to_owned(),
+        raw: raw.to_owned(),
+        range: kind.describe(),
+    };
+    match kind {
+        Kind::Int(lo, hi) => {
+            let value = raw.parse::<i64>().map_err(|_| invalid())?;
+            if value < lo || value > hi {
+                return Err(out_of_range());
+            }
+        }
+        Kind::Float(lo, hi) => {
+            let value = raw.parse::<f64>().map_err(|_| invalid())?;
+            if !value.is_finite() || value < lo || value > hi {
+                return Err(out_of_range());
+            }
+        }
+        Kind::Bool => {
+            if raw != "true" && raw != "false" {
+                return Err(invalid());
+            }
+        }
+        Kind::Choice(options) => {
+            if !options.contains(&raw) {
+                return Err(out_of_range());
+            }
+        }
+    }
+    Ok(())
+}
+
+fn set_field(params: &mut Params, name: &str, raw: &str) {
+    match name {
+        "signal.lookback_fast" => params.signal.lookback_fast = raw.parse().unwrap(),
+        "signal.lookback_slow" => params.signal.lookback_slow = raw.parse().unwrap(),
+        "signal.rsi_period" => params.signal.rsi_period = raw.parse().unwrap(),
+        "signal.rsi_oversold" => params.signal.rsi_oversold = raw.parse().unwrap(),
+        "signal.rsi_overbought" => params.signal.rsi_overbought = raw.parse().unwrap(),
+        "signal.atr_period" => params.signal.atr_period = raw.parse().unwrap(),
+        "signal.macd_fast" => params.signal.macd_fast = raw.parse().unwrap(),
+        "signal.macd_slow" => params.signal.macd_slow = raw.parse().unwrap(),
+        "signal.macd_signal" => params.signal.macd_signal = raw.parse().unwrap(),
+        "signal.vwap_anchor" => params.signal.vwap_anchor = raw.to_owned(),
+        "entry.entry_mode" => params.entry.entry_mode = raw.to_owned(),
+        "entry.entry_offset_ticks" => params.entry.entry_offset_ticks = raw.parse().unwrap(),
+        "entry.entry_slippage_bps" => params.entry.entry_slippage_bps = raw.parse().unwrap(),
+        "entry.entry_min_atr_ratio" => params.entry.entry_min_atr_ratio = raw.parse().unwrap(),
+        "entry.entry_max_spread_bps" => params.entry.entry_max_spread_bps = raw.parse().unwrap(),
+        "entry.entry_cooldown_bars" => params.entry.entry_cooldown_bars = raw.parse().unwrap(),
+        "entry.entry_order_type" => params.entry.entry_order_type = raw.to_owned(),
+        "entry.entry_timeframe_minutes" => params.entry.entry_timeframe_minutes = raw.parse().unwrap(),
+        "entry.entry_confirm_bars" => params.entry.entry_confirm_bars = raw.parse().unwrap(),
+        "entry.entry_allow_flip" => params.entry.entry_allow_flip = raw == "true",
+        "exit.exit_mode" => params.exit.exit_mode = raw.to_owned(),
+        "exit.stop_loss_atr" => params.exit.stop_loss_atr = raw.parse().unwrap(),
+        "exit.take_profit_atr" => params.exit.take_profit_atr = raw.parse().unwrap(),
+        "exit.trail_activation_atr" => params.exit.trail_activation_atr = raw.parse().unwrap(),
+        "exit.trail_distance_atr" => params.exit.trail_distance_atr = raw.parse().unwrap(),
+        "exit.time_stop_bars" => params.exit.time_stop_bars = raw.parse().unwrap(),
+        "exit.breakeven_at_r" => params.exit.breakeven_at_r = raw.parse().unwrap(),
+        "exit.exit_on_signal_flip" => params.exit.exit_on_signal_flip = raw == "true",
+        "exit.exit_slippage_bps" => params.exit.exit_slippage_bps = raw.parse().unwrap(),
+        "exit.partial_exit_fraction" => params.exit.partial_exit_fraction = raw.parse().unwrap(),
+        "risk.max_position_qty" => params.risk.max_position_qty = raw.parse().unwrap(),
+        "risk.max_order_qty" => params.risk.max_order_qty = raw.parse().unwrap(),
+        "risk.max_daily_loss_pct" => params.risk.max_daily_loss_pct = raw.parse().unwrap(),
+        "risk.max_drawdown_pct" => params.risk.max_drawdown_pct = raw.parse().unwrap(),
+        "risk.max_orders_per_bar" => params.risk.max_orders_per_bar = raw.parse().unwrap(),
+        "risk.max_consecutive_losses" => params.risk.max_consecutive_losses = raw.parse().unwrap(),
+        "risk.max_open_positions" => params.risk.max_open_positions = raw.parse().unwrap(),
+        "risk.risk_per_trade_pct" => params.risk.risk_per_trade_pct = raw.parse().unwrap(),
+        "risk.kill_switch" => params.risk.kill_switch = raw == "true",
+        "risk.cooldown_after_halt_bars" => params.risk.cooldown_after_halt_bars = raw.parse().unwrap(),
+        "sizing.sizing_mode" => params.sizing.sizing_mode = raw.to_owned(),
+        "sizing.fixed_qty" => params.sizing.fixed_qty = raw.parse().unwrap(),
+        "sizing.equity_fraction" => params.sizing.equity_fraction = raw.parse().unwrap(),
+        "sizing.vol_target_annual" => params.sizing.vol_target_annual = raw.parse().unwrap(),
+        "sizing.vol_lookback" => params.sizing.vol_lookback = raw.parse().unwrap(),
+        "sizing.min_qty" => params.sizing.min_qty = raw.parse().unwrap(),
+        "sizing.max_qty" => params.sizing.max_qty = raw.parse().unwrap(),
+        "sizing.qty_step" => params.sizing.qty_step = raw.parse().unwrap(),
+        "sizing.leverage_cap" => params.sizing.leverage_cap = raw.parse().unwrap(),
+        "sizing.round_qty" => params.sizing.round_qty = raw == "true",
+        _ => unreachable!("validated field name"),
+    }
+}
+
+/// Parse the supported YAML subset into a validated `Params`.
+pub fn parse(text: &str) -> Result<Params, ConfigError> {
+    let mut params = Params::defaults();
+    let mut seen = BTreeSet::new();
+    let mut section: Option<String> = None;
+
+    for (index, line) in text.lines().enumerate() {
+        let line_no = index + 1;
+        let body = match line.split('#').next() {
+            Some(body) => body.trim(),
+            None => continue,
+        };
+        if body.is_empty() {
+            continue;
+        }
+        let (key, raw) = body.split_once(':').ok_or(ConfigError::Malformed {
+            line: line_no,
+            text: line.trim().to_owned(),
+        })?;
+        let key = key.trim();
+        let raw = raw.trim();
+        if raw.is_empty() {
+            section = Some(key.to_owned());
+            continue;
+        }
+        let prefix = section.as_deref().ok_or(ConfigError::MissingSection)?;
+        let full = format!("{prefix}.{key}");
+        let field = field_for(&full).ok_or_else(|| ConfigError::UnknownKey(full.clone()))?;
+        if !seen.insert(full.clone()) {
+            return Err(ConfigError::DuplicateKey(full));
+        }
+        parse_typed(field.kind, &full, raw)?;
+        set_field(&mut params, &full, raw);
+    }
+
+    let missing: Vec<String> = FIELDS
+        .iter()
+        .map(Field::full_name)
+        .filter(|name| !seen.contains(name))
+        .collect();
+    if !missing.is_empty() {
+        return Err(ConfigError::MissingKeys(missing));
+    }
+    params.validate()?;
+    Ok(params)
+}
+
+/// Read and parse a YAML parameter file from disk.
+pub fn load(path: &str) -> Result<Params, ConfigError> {
+    let text = fs::read_to_string(path).map_err(|e| ConfigError::Io(e.to_string()))?;
+    parse(&text)
+}
+
+/// Generate the Markdown reference table used in `docs/PARAMETERS.md`.
+pub fn schema_markdown() -> String {
+    let mut out = String::from("| Parameter | Default | Range / options | Effect |\n|---|---|---|---|\n");
+    for field in &FIELDS {
+        out.push_str(&format!(
+            "| `{}` | `{}` | {} | {} |\n",
+            field.full_name(),
+            field.default,
+            field.kind.describe(),
+            field.description
+        ));
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SAMPLE: &str = include_str!("../../../config/params.yaml");
+
+    #[test]
+    fn shipped_config_parses_to_all_fifty_fields() {
+        let params = parse(SAMPLE).unwrap();
+        assert_eq!(params, Params::defaults());
+        assert!(params.validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_unknown_out_of_range_and_missing() {
+        let mut text = SAMPLE.replace("lookback_fast: 20", "lookback_fast: 5");
+        assert!(matches!(parse(&text), Err(ConfigError::OutOfRange { .. })));
+        text = SAMPLE.replace("lookback_fast: 20", "alchemy: 20");
+        assert!(matches!(parse(&text), Err(ConfigError::UnknownKey(_))));
+        text = SAMPLE
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("lookback_fast:"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(matches!(parse(&text), Err(ConfigError::MissingKeys(_))));
+    }
+
+    #[test]
+    fn schema_has_unique_names_and_defaults() {
+        let mut names = BTreeSet::new();
+        for field in &FIELDS {
+            assert!(names.insert(field.full_name()));
+            parse_typed(field.kind, &field.full_name(), field.default).unwrap();
+        }
+        assert_eq!(names.len(), 50);
+    }
+}
