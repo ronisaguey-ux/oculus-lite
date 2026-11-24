@@ -1,0 +1,58 @@
+# oculus-lite: all 50 parameters, hand-tuned by editing this file.
+# There is no optimiser, genetic algorithm or automatic tuning anywhere in this repo.
+# Values below are neutral illustrative defaults, not tuned to any market.
+signal:
+  lookback_fast: 20           # Fast moving-average window in bars
+  lookback_slow: 50           # Slow moving-average window in bars
+  rsi_period: 14              # Wilder RSI lookback in bars
+  rsi_oversold: 30            # RSI level below which long entries are allowed
+  rsi_overbought: 70          # RSI level above which short entries are allowed
+  atr_period: 14              # ATR lookback in bars
+  macd_fast: 12               # Fast MACD EMA period
+  macd_slow: 26               # Slow MACD EMA period
+  macd_signal: 9              # MACD signal EMA period
+  vwap_anchor: session        # VWAP reset anchor (session, day, none)
+entry:
+  entry_mode: crossover       # Signal rule used to open a position
+  entry_offset_ticks: 1       # Ticks added to a limit entry price
+  entry_slippage_bps: 2       # Simulated slippage in basis points
+  entry_min_atr_ratio: 0.5    # Minimum ATR/price ratio in percent required to trade
+  entry_max_spread_bps: 5     # Maximum simulated spread in basis points
+  entry_cooldown_bars: 5      # Bars to wait after an exit before re-entering
+  entry_order_type: market    # Order type used for entries (market, limit)
+  entry_timeframe_minutes: 5  # Nominal bar timeframe recorded in the config
+  entry_confirm_bars: 1       # Bars a signal must persist before entry
+  entry_allow_flip: true      # Allow reversing directly from long to short
+exit:
+  exit_mode: atr              # Stop style applied to opened positions
+  stop_loss_atr: 2            # Initial stop distance in ATR multiples
+  take_profit_atr: 4          # Take-profit distance in ATR multiples
+  trail_activation_atr: 1     # Favourable move required to arm the trailing stop
+  trail_distance_atr: 1.5     # Trailing distance in ATR multiples
+  time_stop_bars: 50          # Maximum holding period in bars
+  breakeven_at_r: 1           # R multiple at which the stop moves to break even
+  exit_on_signal_flip: true   # Close a position when the signal reverses
+  exit_slippage_bps: 2        # Slippage applied to exit fills
+  partial_exit_fraction: 0    # Fraction closed at the take-profit level
+risk:
+  max_position_qty: 10        # Absolute position size ceiling
+  max_order_qty: 5            # Maximum quantity per order
+  max_daily_loss_pct: 3       # Daily loss limit as a percent of equity
+  max_drawdown_pct: 10        # Peak-to-trough equity limit in percent
+  max_orders_per_bar: 2       # Order rate limit per bar
+  max_consecutive_losses: 5   # Loss streak that halts trading
+  max_open_positions: 1       # Maximum simultaneously open positions
+  risk_per_trade_pct: 1       # Equity fraction risked per trade
+  kill_switch: false          # Manual halt; no order may be submitted
+  cooldown_after_halt_bars: 20 # Bars to wait after a risk halt
+sizing:
+  sizing_mode: fixed          # Position sizing method (fixed, percent_equity, vol_target)
+  fixed_qty: 1                # Quantity used by fixed sizing
+  equity_fraction: 0.05       # Equity fraction used by percent sizing
+  vol_target_annual: 0.2      # Annualised volatility target
+  vol_lookback: 20            # Lookback for realised volatility
+  min_qty: 0.01               # Minimum tradable quantity
+  max_qty: 10                 # Maximum tradable quantity
+  qty_step: 0.01              # Quantity rounding increment
+  leverage_cap: 1             # Maximum notional-to-equity ratio
+  round_qty: true             # Round quantities to qty_step
