@@ -1,0 +1,19 @@
+[package]
+name = "oculus-trader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Small paper-first trader with an explicitly gated live path"
+
+[dependencies]
+oculus-backtester = { path = "../backtester" }
+oculus-config-rs = { path = "../rust/oculus-config-rs" }
+oculus-execution = { path = "../rust/execution" }
+
+[lib]
+name = "oculus_trader"
+path = "src/lib.rs"
+
+[[bin]]
+name = "oculus-trader"
+path = "src/main.rs"
