@@ -1,0 +1,10 @@
+[package]
+name = "oculus-config-rs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Hand-tuned, validated 50-parameter schema for oculus-lite"
+
+[lib]
+name = "oculus_config_rs"
+path = "src/lib.rs"
