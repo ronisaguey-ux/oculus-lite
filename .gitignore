@@ -3,3 +3,4 @@ target/
 .dart_tool/
 flutter_app/build/
 *.bak*
+sample/bars.csv
