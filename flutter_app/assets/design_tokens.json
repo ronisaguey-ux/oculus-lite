@@ -1,0 +1,34 @@
+{
+  "$schema": "https://oculus.local/schemas/design-tokens-1.0.json",
+  "version": "1.0.0",
+  "note": "P1B0R0F6#80: single source of truth for semantic colours consumed by BOTH the Flutter app and the HTML reports. Contrast is not asserted here by hand - flutter_app/test/accessibility_contrast_test.dart computes the WCAG 2.1 contrast ratio from these pairs and fails CI below the threshold, and the same file is the input the HTML report generator reads, so the two surfaces cannot drift.",
+  "contrast": {
+    "normal_text_min_ratio": 4.5,
+    "large_text_min_ratio": 3.0
+  },
+  "surfaces": {
+    "light": { "background": "#FFFFFF", "surface": "#F5F5F5" },
+    "dark":  { "background": "#121212", "surface": "#1E1E1E" },
+    "oled":  { "background": "#000000", "surface": "#0A0A0A" }
+  },
+  "semantic": {
+    "profit": { "light": "#2E7D32", "dark": "#66BB6A", "oled": "#66BB6A" },
+    "loss":   { "light": "#C62828", "dark": "#EF5350", "oled": "#EF5350" },
+    "neutral":{ "light": "#616161", "dark": "#BDBDBD", "oled": "#BDBDBD" },
+    "warning":{ "light": "#8D6E00", "dark": "#F0E442", "oled": "#F0E442" },
+    "info":   { "light": "#0B5FA5", "dark": "#56B4E9", "oled": "#56B4E9" }
+  },
+  "pairs": [
+    { "name": "profit_on_dark",  "fg": "profit",  "bg": "dark.background",  "size": "normal" },
+    { "name": "profit_on_oled",  "fg": "profit",  "bg": "oled.background",  "size": "normal" },
+    { "name": "profit_on_light", "fg": "profit",  "bg": "light.background", "size": "normal" },
+    { "name": "loss_on_dark",    "fg": "loss",    "bg": "dark.background",  "size": "normal" },
+    { "name": "loss_on_oled",    "fg": "loss",    "bg": "oled.background",  "size": "normal" },
+    { "name": "loss_on_light",   "fg": "loss",    "bg": "light.background", "size": "normal" },
+    { "name": "neutral_on_dark", "fg": "neutral", "bg": "dark.background",  "size": "normal" },
+    { "name": "neutral_on_oled", "fg": "neutral", "bg": "oled.background",  "size": "normal" },
+    { "name": "warning_on_dark", "fg": "warning", "bg": "dark.background",  "size": "large"  },
+    { "name": "warning_on_oled", "fg": "warning", "bg": "oled.background",  "size": "large"  },
+    { "name": "info_on_dark",    "fg": "info",    "bg": "dark.background",  "size": "normal" }
+  ]
+}
