@@ -1,0 +1,5 @@
+target/
+.flutter-plugins
+.dart_tool/
+flutter_app/build/
+*.bak*
