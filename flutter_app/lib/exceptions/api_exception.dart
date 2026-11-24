@@ -318,3 +318,206 @@ sealed class ApiException implements Exception {
         raw.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '');
     // Redact Bearer tokens to prevent auth token leakage
     cleaned = cleaned.replaceAll(
+        RegExp(r'Bearer\s+[a-fA-F0-9]+'), 'Bearer <redacted>');
+    // Redact emails
+    cleaned = cleaned.replaceAll(
+        RegExp(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'),
+        '[EMAIL]');
+    // Redact phone numbers (simple pattern)
+    cleaned =
+        cleaned.replaceAll(RegExp(r'\b\+?\d[\d\s\-()]{7,}\d\b'), '[PHONE]');
+    // Redact potential tokens (hex or base64-like length >= 16)
+    cleaned =
+        cleaned.replaceAll(RegExp(r'\b[A-Fa-f0-9]{16,}\b'), '[HEX_TOKEN]');
+    cleaned = cleaned.replaceAll(
+        RegExp(r'\b[A-Za-z0-9+/]{20,}={0,2}\b'), '[B64_TOKEN]');
+    // Truncate to 1000 chars to avoid log bloat
+    if (cleaned.length > 1000) {
+      cleaned = '${cleaned.substring(0, 1000)}...[TRUNCATED]';
+    }
+    return cleaned;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'statusCode': statusCode,
+        'message': userMessage,
+        'endpoint': endpoint,
+        'method': method,
+        'requestId': requestId,
+        'timestamp': timestamp.toIso8601String(),
+        'retryCount': retryCount,
+        'retryAfter': retryAfter,
+        'rawBody': rawBody,
+        'errorCode': errorCode,
+        'details': details,
+      };
+
+  /// Structured JSON log line with full request context + correlation id.
+  ///
+  /// P1B5R0F13#44: suitable for shipping straight to a structured log sink.
+  /// The correlation id ([requestId]) lets operators join this error line to
+  /// the server-side access log for the same request.
+  String toLogJson() => jsonEncode({
+        'level': 'error',
+        'kind': 'api_exception',
+        'statusCode': statusCode,
+        'errorCode': errorCode,
+        'message': _sanitizeMessage(_message),
+        'endpoint': endpoint,
+        'method': method,
+        'correlationId': requestId,
+        'requestId': requestId,
+        'timestamp': timestamp.toIso8601String(),
+        'retryCount': retryCount,
+        'retryAfter': retryAfter,
+      });
+
+  String? _cachedToString;
+
+  @override
+  String toString() {
+    // Cache the formatted string because toString() may be called repeatedly
+    // in hot error paths (rate limiting, network retries). The exception is
+    // immutable, so the cached value never goes stale.
+    return _cachedToString ??= _buildToString();
+  }
+
+  String _buildToString() {
+    // Sanitize every free-form field before rendering so raw server messages
+    // (and anything embedded in the raw response body) cannot leak into logs
+    // via toString(). Only the safe, user-facing message is surfaced verbatim.
+    final safeMessage = _sanitizeMessage(_message);
+    final safeRawBody =
+        rawBody != null ? _sanitizeMessage(rawBody!) : null;
+    return 'OculusException: $statusCode $userMessage'
+        '${safeMessage.isNotEmpty ? " message=$safeMessage" : ""}'
+        '${endpoint != null ? " endpoint=$endpoint" : ""}'
+        '${method != null ? " method=$method" : ""}'
+        ' requestId=$requestId'
+        ' timestamp=${timestamp.toIso8601String()}'
+        ' retryCount=$retryCount'
+        '${retryAfter != null ? " retryAfter=$retryAfter" : ""}'
+        '${safeRawBody != null ? " rawBody=$safeRawBody" : ""}'
+        '${errorCode != null ? " errorCode=$errorCode" : ""}'
+        '${details != null ? " details=$details" : ""}';
+  }
+}
+
+/// CE105-1701: concrete implementation backing the sealed [ApiException]
+/// unnamed factory, preserving the full request-context API.
+final class _ApiExceptionImpl extends ApiException {
+  _ApiExceptionImpl(
+    int? statusCode,
+    String? message, {
+    String? endpoint,
+    String? method,
+    String? requestId,
+    DateTime? timestamp,
+    int retryCount = 0,
+    String? rawBody,
+    String? errorCode,
+    Map<String, dynamic>? details,
+    int? retryAfter,
+  }) : super._(
+          statusCode,
+          message,
+          endpoint: endpoint,
+          method: method,
+          requestId: requestId,
+          timestamp: timestamp,
+          retryCount: retryCount,
+          rawBody: rawBody,
+          errorCode: errorCode,
+          details: details,
+          retryAfter: retryAfter,
+        );
+}
+
+/// CE105-1701: sealed-hierarchy member for 401 responses.
+final class Unauthorized extends ApiException {
+  Unauthorized(
+    String? message, {
+    String? endpoint,
+    String? method,
+    String? rawBody,
+    String? errorCode,
+    Map<String, dynamic>? details,
+    String? requestId,
+  }) : super._(401, message,
+            endpoint: endpoint,
+            method: method,
+            rawBody: rawBody,
+            errorCode: errorCode,
+            details: details,
+            requestId: requestId);
+}
+
+/// CE105-1701: sealed-hierarchy member for 429 responses.
+final class RateLimited extends ApiException {
+  RateLimited(
+    String? message, {
+    String? endpoint,
+    String? method,
+    String? rawBody,
+    String? errorCode,
+    Map<String, dynamic>? details,
+    String? requestId,
+    int? retryAfter,
+  }) : super._(429, message,
+            endpoint: endpoint,
+            method: method,
+            rawBody: rawBody,
+            errorCode: errorCode,
+            details: details,
+            requestId: requestId,
+            retryAfter: retryAfter);
+}
+
+/// CE105-1701: sealed-hierarchy member for 5xx responses.
+final class ServerError extends ApiException {
+  ServerError(
+    String? message, {
+    int? statusCode = 500,
+    String? endpoint,
+    String? method,
+    String? rawBody,
+    String? errorCode,
+    Map<String, dynamic>? details,
+    String? requestId,
+    int? retryAfter,
+  }) : super._(statusCode, message,
+            endpoint: endpoint,
+            method: method,
+            rawBody: rawBody,
+            errorCode: errorCode,
+            details: details,
+            requestId: requestId,
+            retryAfter: retryAfter);
+}
+
+/// CE105-1701: sealed-hierarchy member for transport failures with no HTTP
+/// status code.
+final class NetworkError extends ApiException {
+  NetworkError(
+    String? message, {
+    String? endpoint,
+    String? method,
+    String? rawBody,
+    String? errorCode,
+    Map<String, dynamic>? details,
+    String? requestId,
+  }) : super._(null, message,
+            endpoint: endpoint,
+            method: method,
+            rawBody: rawBody,
+            errorCode: errorCode,
+            details: details,
+            requestId: requestId);
+
+  @override
+  ApiErrorCode get code => ApiErrorCode.networkError;
+}
+
+/// P1B7R0F9#36: the pre-unification name, kept so existing call sites (and
+/// `on OculusException` clauses) keep working.
+typedef OculusException = ApiException;
