@@ -1,0 +1,10 @@
+[package]
+name = "oculus-indicators"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Bounded-memory streaming technical indicators for oculus-lite"
+
+[lib]
+name = "oculus_indicators"
+path = "src/lib.rs"
