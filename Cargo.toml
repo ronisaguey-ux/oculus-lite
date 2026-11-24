@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "rust/execution",
+    "rust/indicators",
+    "rust/oculus-config-rs",
+    "backtester",
+    "trader",
+    "tests",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1
