@@ -29,7 +29,7 @@ backtester/             library + CLI: event-driven historical run, metrics, led
 trader/                 library + CLI: paper (default) and gated live execution
 flutter_app/            Flutter dashboard (ships as source; not built here)
 config/params.yaml      the 50 parameters, each with a one-line comment
-sample/                 synthetic OHLCV bars — generated, not market data
+sample/                 generator for synthetic OHLCV bars — generated, not market data
 tests/                  integration tests: determinism, fills, risk limits
 docs/ARCHITECTURE.md    pipeline diagram and module responsibilities
 docs/PARAMETERS.md      the 50 parameters, their ranges and what they move
@@ -43,6 +43,14 @@ $ cargo test
 ```
 
 ## Run a backtest
+
+Generate the synthetic bars first (2,000 bars, deterministic):
+
+```console
+$ python3 sample/generate.py
+```
+
+Then:
 
 ```console
 $ cargo run --release -p oculus-backtester -- backtest --config config/params.yaml --data sample/
